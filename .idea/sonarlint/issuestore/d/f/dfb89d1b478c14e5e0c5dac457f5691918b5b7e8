@@ -1,14 +1,2 @@
 
-^kotlin:S11722":Use "_" instead of this unused lambda parameter "session".(§ËºÊûÿÿÿÿ8«Ï–±³1
-8kotlin:S1128"Remove this unused import.(¢F8»¦±³1
-9kotlin:S1128"Remove this unused import.(‚ûªì8»¦±³1
-9kotlin:S1128"Remove this unused import.(êÆé8»¦±³1
->kotlin:S1128"Remove this unused import.(÷±Ôúıÿÿÿÿ8»¦±³1
->kotlin:S1128"Remove this unused import.(±û»úÿÿÿÿ8»¦±³1
-9kotlin:S1128"Remove this unused import.(øœç¢8»¦±³1
->kotlin:S1128"Remove this unused import.(ÿºòĞıÿÿÿÿ8¾åª±³1
-9kotlin:S1128"Remove this unused import.(©ù¯º8¾åª±³1
->kotlin:S1128"Remove this unused import.( ÿÑıÿÿÿÿ8»¦±³1
->kotlin:S1128"Remove this unused import.(¹²…åøÿÿÿÿ8Û¾—±³1
-Bkotlin:S125&"Remove this commented out code.(Íè¦©ÿÿÿÿÿ8¼¦±³1
-<kotlin:S125E"Remove this commented out code.(”‡J8¿åª±³1
+>kotlin:S1128"Remove this unused import.(£íş¹şÿÿÿÿ8ĞÓäß³1
