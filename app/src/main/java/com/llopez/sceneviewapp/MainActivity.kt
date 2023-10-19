@@ -1,7 +1,7 @@
 package com.llopez.sceneviewapp
 
-import android.R.attr
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -13,11 +13,17 @@ import androidx.lifecycle.lifecycleScope
 import com.google.ar.core.Config
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.position
+import io.github.sceneview.ar.node.CursorNode
+import io.github.sceneview.ar.node.PlacementMode
 import io.github.sceneview.node.ModelNode
+import io.github.sceneview.utils.colorOf
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
     private lateinit var sceneView: ArSceneView
+    private lateinit var cursorNode: CursorNode
+    private lateinit var cursorModelNode: ModelNode
+    private val TAG: String = "SceneViewApp-MainActivity.kt"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,11 +37,22 @@ class MainActivity : AppCompatActivity() {
             }
             configureSession { _, _ ->
             }
+            cursorNode = CursorNode(
+                engine = engine,
+                modelFileLocation = "PokebolaColorA.glb",
+                autoAnimate = false,
+                centerOrigin = null,
+                scaleToUnits = 0.1f
+            )
+            cursorNode.colorNotTracking = colorOf(rgb = 0f)
+            cursorNode.colorTracking = colorOf(rgb = 0f)
+            cursorNode.colorClicked = colorOf(rgb = 0f)
+            addChild(cursorNode)
         }
         sceneView.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL
 
-        sceneView.onTapAr = { hitTestResult, _ ->
-            Log.i("SceneViewApp-MainActivity.kt", "onTapAr: ${hitTestResult.hitPose.position}")
+        sceneView.onTapAr = { hitTestResult, motionEvent ->
+            Log.i(TAG, "onTapAr: ${hitTestResult.hitPose.position} - ${cursorNode.worldPosition}")
 
             lifecycleScope.launch {
                 val node = ModelNode(
@@ -49,7 +66,7 @@ class MainActivity : AppCompatActivity() {
                     centerOrigin = null,
                     scaleToUnits = 0.25f,
                     onError = { exception ->
-                        Log.i("SceneViewApp-MainActivity.kt", "node.loadModelGlb() - onError: ${exception.localizedMessage}")
+                        Log.i(TAG, "node.loadModelGlb() - onError: ${exception.localizedMessage}")
                     }
                 )
                 node.worldPosition = hitTestResult.hitPose.position
