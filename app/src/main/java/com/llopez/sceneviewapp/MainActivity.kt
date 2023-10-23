@@ -11,6 +11,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.ar.core.Config
+import dev.romainguy.kotlin.math.Float3
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.position
 import io.github.sceneview.ar.node.CursorNode
@@ -22,7 +23,6 @@ import kotlinx.coroutines.launch
 class MainActivity : AppCompatActivity() {
     private lateinit var sceneView: ArSceneView
     private lateinit var cursorNode: CursorNode
-    private lateinit var cursorModelNode: ModelNode
     private val TAG: String = "SceneViewApp-MainActivity.kt"
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -59,18 +59,37 @@ class MainActivity : AppCompatActivity() {
                     engine = sceneView.engine
                 )
 
-                node.loadModelGlb(
-                    context = sceneView.context,
-                    glbFileLocation = "PokebolaColorA.glb",
+                // Load local 3D object
+//                node.loadModelGlb(
+//                    context = sceneView.context,
+//                    glbFileLocation = "PokebolaColorA.glb",
+//                    autoAnimate = false,
+//                    centerOrigin = null,
+//                    scaleToUnits = 0.25f,
+//                    onError = { exception ->
+//                        Log.i(TAG, "node.loadModelGlb() - onError: ${exception.localizedMessage}")
+//                    }
+//                )
+
+                // Load 3D object from server
+                node.loadModelGlbAsync(
+                    glbFileLocation = "https://firebasestorage.googleapis.com/v0/b/ar-core-test-project.appspot.com/o/PokebolaColorA.glb?alt=media&token=80f1b820-ad2b-446e-8d3b-ca9554d25f7d",
                     autoAnimate = false,
                     centerOrigin = null,
                     scaleToUnits = 0.25f,
                     onError = { exception ->
-                        Log.i(TAG, "node.loadModelGlb() - onError: ${exception.localizedMessage}")
+                        Log.i(TAG, "node.loadModelGlb() - load onError: ${exception.localizedMessage}")
+                    },
+                    onLoaded = { _ ->
+                        Log.i(TAG, "node.loadModelGlb() - load success")
                     }
                 )
+
                 node.worldPosition = hitTestResult.hitPose.position
                 sceneView.addChild(node)
+
+                node.rotation = Float3( 0f, 270f, 0f)
+                // node.scale = Float3(0.75f, 0.75f, 0.75f)
             }
         }
     }
