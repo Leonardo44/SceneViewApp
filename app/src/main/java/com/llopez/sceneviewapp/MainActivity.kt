@@ -1,12 +1,23 @@
 package com.llopez.sceneviewapp
 
+import android.content.ContentResolver
+import android.content.ContentValues
+import android.content.Context
 import android.content.pm.PackageManager
-import android.graphics.Color
+import android.graphics.Bitmap
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.os.Handler
+import android.os.HandlerThread
+import android.provider.MediaStore
 import android.util.Log
+import android.view.PixelCopy
+import android.widget.Button
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
@@ -15,13 +26,21 @@ import dev.romainguy.kotlin.math.Float3
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.position
 import io.github.sceneview.ar.node.CursorNode
-import io.github.sceneview.ar.node.PlacementMode
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.utils.colorOf
 import kotlinx.coroutines.launch
+import java.io.File
+import java.io.FileOutputStream
+import java.io.OutputStream
+
 
 class MainActivity : AppCompatActivity() {
+    // Views
     private lateinit var sceneView: ArSceneView
+    private lateinit var generateImageBtn: Button
+    private lateinit var mainContainer: ConstraintLayout
+
+    // 3D model
     private lateinit var cursorNode: CursorNode
     private val TAG: String = "SceneViewApp-MainActivity.kt"
 
@@ -29,6 +48,8 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        generateImageBtn = findViewById(R.id.generateImageBtn)
+        mainContainer = findViewById(R.id.mainContainer)
         sceneView = findViewById<ArSceneView?>(R.id.sceneView).apply {
             lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
             depthEnabled = true
@@ -51,7 +72,7 @@ class MainActivity : AppCompatActivity() {
         }
         sceneView.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL
 
-        sceneView.onTapAr = { hitTestResult, motionEvent ->
+        sceneView.onTapAr = { hitTestResult, _ ->
             Log.i(TAG, "onTapAr: ${hitTestResult.hitPose.position} - ${cursorNode.worldPosition}")
 
             lifecycleScope.launch {
@@ -60,30 +81,30 @@ class MainActivity : AppCompatActivity() {
                 )
 
                 // Load local 3D object
-//                node.loadModelGlb(
-//                    context = sceneView.context,
-//                    glbFileLocation = "PokebolaColorA.glb",
-//                    autoAnimate = false,
-//                    centerOrigin = null,
-//                    scaleToUnits = 0.25f,
-//                    onError = { exception ->
-//                        Log.i(TAG, "node.loadModelGlb() - onError: ${exception.localizedMessage}")
-//                    }
-//                )
-
-                // Load 3D object from server
-                node.loadModelGlbAsync(
-                    glbFileLocation = "https://firebasestorage.googleapis.com/v0/b/ar-core-test-project.appspot.com/o/PokebolaColorA.glb?alt=media&token=80f1b820-ad2b-446e-8d3b-ca9554d25f7d",
+                node.loadModelGlb(
+                    context = sceneView.context,
+                    glbFileLocation = "PokebolaColorA.glb",
                     autoAnimate = false,
                     centerOrigin = null,
                     scaleToUnits = 0.25f,
                     onError = { exception ->
-                        Log.i(TAG, "node.loadModelGlb() - load onError: ${exception.localizedMessage}")
-                    },
-                    onLoaded = { _ ->
-                        Log.i(TAG, "node.loadModelGlb() - load success")
+                        Log.i(TAG, "node.loadModelGlb() - onError: ${exception.localizedMessage}")
                     }
                 )
+
+                // Load 3D object from server
+//                node.loadModelGlbAsync(
+//                    glbFileLocation = "https://firebasestorage.googleapis.com/v0/b/ar-core-test-project.appspot.com/o/PokebolaColorA.glb?alt=media&token=80f1b820-ad2b-446e-8d3b-ca9554d25f7d",
+//                    autoAnimate = false,
+//                    centerOrigin = null,
+//                    scaleToUnits = 0.25f,
+//                    onError = { exception ->
+//                        Log.i(TAG, "node.loadModelGlb() - load onError: ${exception.localizedMessage}")
+//                    },
+//                    onLoaded = { _ ->
+//                        Log.i(TAG, "node.loadModelGlb() - load success")
+//                    }
+//                )
 
                 node.worldPosition = hitTestResult.hitPose.position
                 sceneView.addChild(node)
@@ -91,6 +112,10 @@ class MainActivity : AppCompatActivity() {
                 node.rotation = Float3( 0f, 270f, 0f)
                 // node.scale = Float3(0.75f, 0.75f, 0.75f)
             }
+        }
+
+        generateImageBtn.setOnClickListener {
+            createPixelCopy()
         }
     }
 
@@ -137,7 +162,74 @@ class MainActivity : AppCompatActivity() {
         ) == PackageManager.PERMISSION_GRANTED
     }
 
-    override fun onPause() {
-        super.onPause()
+    private fun saveImageInDevice(
+        context: Context,
+        image: Bitmap,
+        compressFormat: Bitmap.CompressFormat = Bitmap.CompressFormat.PNG
+    ): File {
+        val extension = if (compressFormat == Bitmap.CompressFormat.PNG) ".png" else ".jpg"
+        val imageName = "example_image_"
+
+        val outputFile =
+            File.createTempFile(imageName, extension, context.cacheDir)
+                .apply {
+                    createNewFile()
+                }
+
+        val outputStream = FileOutputStream(outputFile)
+
+        image.compress(compressFormat, 100, outputStream)
+        outputStream.close()
+
+        saveImageInGallery(image, imageName, extension, Bitmap.CompressFormat.PNG)
+
+        return outputFile
+    }
+    
+    private fun saveImageInGallery(image: Bitmap, imageName: String, imageExtension: String, compressFormat: Bitmap.CompressFormat) {
+        val imagesFolderName = "SceneViewApp"
+
+        val fos: OutputStream? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val resolver: ContentResolver = this.contentResolver
+            val contentValues = ContentValues()
+            contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, imageName)
+            contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "image/png")
+            contentValues.put(MediaStore.MediaColumns.RELATIVE_PATH, "DCIM/$imagesFolderName")
+
+            val imageUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+            resolver.openOutputStream(imageUri!!)
+        } else {
+            val imagesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).toString() + File.separator + imagesFolderName
+            val file = File(imagesDir)
+            val image = File(imagesDir, "${imageName}${imageExtension}")
+
+            if (!file.exists()) {
+                file.mkdir()
+            }
+
+            FileOutputStream(image)
+        }
+
+        if (fos != null) {
+            image.compress(compressFormat, 100, fos)
+        }
+
+        fos?.flush()
+        fos?.close()
+    }
+
+    private fun createPixelCopy() {
+        val bitmap = Bitmap.createBitmap(sceneView.width, sceneView.height, Bitmap.Config.ARGB_8888)
+
+        PixelCopy.request(
+            sceneView, bitmap, { result ->
+                if (result == PixelCopy.SUCCESS) {
+                    saveImageInDevice(this, bitmap)
+                }
+            },
+            Handler(
+                HandlerThread("screenshot").apply { start() }.looper
+            )
+        )
     }
 }

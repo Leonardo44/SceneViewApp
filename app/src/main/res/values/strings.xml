@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">SceneViewApp</string>
+    <string name="activity_main_generate_image">Guardar imagen</string>
 </resources>
