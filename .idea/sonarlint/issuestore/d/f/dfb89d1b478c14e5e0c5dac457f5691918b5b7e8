@@ -1,4 +1,5 @@
 
-bkotlin:S11726">Use "_" instead of this unused lambda parameter "motionEvent".(À”Ğÿùÿÿÿÿ8åÓÃµ1
-8kotlin:S1128"Remove this unused import.(îâœu8êÓÃµ1
-9kotlin:S1128"Remove this unused import.(©ù¯º8êÓÃµ1
+^kotlin:S899å":Do something with the "Boolean" value returned by "mkdir".(Çï­†ÿÿÿÿÿ8Îßêì¸1
+>kotlin:S1128"Remove this unused import.(³½Ëôûÿÿÿÿ8Ñßêì¸1
+>kotlin:S1128"Remove this unused import.(­ªæ§üÿÿÿÿ8Ñßêì¸1
+>kotlin:S1128 "Remove this unused import.(¶»×ëûÿÿÿÿ8Ñßêì¸1

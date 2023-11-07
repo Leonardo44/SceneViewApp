@@ -3,8 +3,10 @@ package com.llopez.sceneviewapp
 import android.content.ContentResolver
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
@@ -21,11 +23,13 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import com.google.android.filament.gltfio.Animator
 import com.google.ar.core.Config
 import dev.romainguy.kotlin.math.Float3
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.position
 import io.github.sceneview.ar.node.CursorNode
+import io.github.sceneview.model.model
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.utils.colorOf
 import kotlinx.coroutines.launch
@@ -68,7 +72,7 @@ class MainActivity : AppCompatActivity() {
             cursorNode.colorNotTracking = colorOf(rgb = 0f)
             cursorNode.colorTracking = colorOf(rgb = 0f)
             cursorNode.colorClicked = colorOf(rgb = 0f)
-            addChild(cursorNode)
+            // addChild(cursorNode)
         }
         sceneView.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL
 
@@ -81,42 +85,60 @@ class MainActivity : AppCompatActivity() {
                 )
 
                 // Load local 3D object
-                node.loadModelGlb(
-                    context = sceneView.context,
-                    glbFileLocation = "PokebolaColorA.glb",
-                    autoAnimate = false,
-                    centerOrigin = null,
-                    scaleToUnits = 0.25f,
-                    onError = { exception ->
-                        Log.i(TAG, "node.loadModelGlb() - onError: ${exception.localizedMessage}")
-                    }
-                )
-
-                // Load 3D object from server
-//                node.loadModelGlbAsync(
-//                    glbFileLocation = "https://firebasestorage.googleapis.com/v0/b/ar-core-test-project.appspot.com/o/PokebolaColorA.glb?alt=media&token=80f1b820-ad2b-446e-8d3b-ca9554d25f7d",
+//                node.loadModelGlb(
+//                    context = sceneView.context,
+//                    glbFileLocation = "PokebolaColorA.glb",
 //                    autoAnimate = false,
 //                    centerOrigin = null,
 //                    scaleToUnits = 0.25f,
 //                    onError = { exception ->
-//                        Log.i(TAG, "node.loadModelGlb() - load onError: ${exception.localizedMessage}")
-//                    },
-//                    onLoaded = { _ ->
-//                        Log.i(TAG, "node.loadModelGlb() - load success")
+//                        Log.i(TAG, "node.loadModelGlb() - onError: ${exception.localizedMessage}")
 //                    }
 //                )
 
+                // Load 3D object from server
+                node.loadModelGlbAsync(
+                    glbFileLocation = "https://storage.googleapis.com/ese-plus-ar-assets/assets/c6dfec73-02e8-4dfe-962a-dd7a33e7bc85/c6dfec73.glb",
+                    autoAnimate = true,
+                    centerOrigin = null,
+                    scaleToUnits = 20f,
+                    onError = { exception ->
+                        Log.i(TAG, "node.loadModelGlb() - load onError: ${exception.localizedMessage}")
+                    },
+                    onLoaded = { _ ->
+                        Log.i(TAG, "node.loadModelGlb() - load success")
+
+                        node.playingAnimations.forEach { subNode ->
+                            node.playAnimation(subNode.key, loop = true)
+                        }
+                    }
+                )
+                
                 node.worldPosition = hitTestResult.hitPose.position
                 sceneView.addChild(node)
-
-                node.rotation = Float3( 0f, 270f, 0f)
+                // node.rotation = Float3( 0f, 270f, 0f)
                 // node.scale = Float3(0.75f, 0.75f, 0.75f)
             }
         }
 
         generateImageBtn.setOnClickListener {
             createPixelCopy()
+            openIntentArViewer()
         }
+    }
+
+    private fun openIntentArViewer() {
+        val intent = Intent(Intent.ACTION_VIEW)
+        val intentUri = Uri.parse("https://arvr.google.com/scene-viewer/1.0")
+            .buildUpon()
+            .appendQueryParameter("file", "https://storage.googleapis.com/ese-plus-ar-assets/assets/c6dfec73-02e8-4dfe-962a-dd7a33e7bc85/c6dfec73.gltf")
+            .appendQueryParameter("mode", "ar_preferred")
+            .build()
+
+        intent.data = intentUri
+        intent.setPackage("com.google.ar.core")
+
+        startActivity(intent)
     }
 
     override fun onResume() {
